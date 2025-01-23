@@ -1,124 +1,120 @@
-const landingPage = document.querySelector('.landing-page');
-const startButton = document.querySelector('#startButton');
-const puzzleContainer = document.querySelector('.puzzle-container');
-const moves = document.querySelector('.moves');
-const puzzle = document.querySelector('.puzzle');
-let currentElement = "";
-let movesCount = 0;
-let imagesArr = [];
+const allWords = ['JAVASCRIPT', 'HTML', 'CSS', 'PUZZLE', 'GAME', 'CODE', 'PROGRAM', 'DEBUG', 'FUNCTION', 'VARIABLE'];
+const selectedWords = [];
+while (selectedWords.length < 5) {
+    const word = allWords[Math.floor(Math.random() * allWords.length)];
+    if (!selectedWords.includes(word)) {
+        selectedWords.push(word);
+    }
+}
 
-// Random number for image
-const randomNumber = () => Math.floor(Math.random() * 8) + 1;
 
-// Get row and column value from data-position
-const getCoords = (element) => {
-    const [row, col] = element.getAttribute("data-position").split("_");
-    return [parseInt(row), parseInt(col)];
-};
+const grid = document.getElementById('grid');
+const wordList = document.getElementById('wordList');
+const size = 10;
+const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const gridArray = Array(size).fill().map(() => Array(size).fill(''));
+const foundWords = new Set();
 
-// Check if cells are adjacent
-const checkAdjacent = (row1, row2, col1, col2) => {
-    if (row1 === row2) {
-        // left/right
-        if (col2 === col1 - 1 || col2 === col1 + 1) {
-            return true;
+
+function placeWord(word) {
+    let placed = false;
+    while (!placed) {
+        const startX = Math.floor(Math.random() * (size - word.length + 1));
+        const startY = Math.floor(Math.random() * size);
+        let canPlace = true;
+
+
+        for (let i = 0; i < word.length; i++) {
+            if (gridArray[startY][startX + i] !== '') {
+                canPlace = false;
+                break;
+            }
         }
-    } else if (col1 === col2) {
-        // up/down
-        if (row2 === row1 - 1 || row2 === row1 + 1) {
-            return true;
+
+
+        if (canPlace) {
+            for (let i = 0; i < word.length; i++) {
+                gridArray[startY][startX + i] = word[i];
+            }
+            placed = true;
         }
     }
-    return false;
-};
+}
 
-const randomImages = () => {
-    while (imagesArr.length < 8) {
-        let randomVal = randomNumber();
-        if (!imagesArr.includes(randomVal)) {
-            imagesArr.push(randomVal);
+
+function fillGrid() {
+    selectedWords.forEach(word => {
+        placeWord(word);
+        const li = document.createElement('li');
+        li.textContent = word;
+        li.dataset.word = word;
+        wordList.appendChild(li);
+    });
+
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            if (!gridArray[y][x]) {
+                gridArray[y][x] = letters[Math.floor(Math.random() * letters.length)];
+            }
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.textContent = gridArray[y][x];
+            grid.appendChild(cell);
         }
     }
-    imagesArr.push(9);
-};
+}
 
-startButton.addEventListener("click", () => {
-    landingPage.style.display = 'none';
-    puzzleContainer.style.display = 'flex';
-    movesCount = 0;
-    moves.innerText = `Moves: ${movesCount}`;
-    imagesArr = [];
-    randomImages();
-    puzzle.innerHTML = ''; // Clear previous puzzle
-    generateGrid();
+
+function highlightWord(word) {
+    let startX = -1;
+    let startY = -1;
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            if (gridArray[y][x] === word[0]) {
+                let match = true;
+                for (let i = 0; i < word.length; i++) {
+                    if (gridArray[y][x + i] !== word[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    startX = x;
+                    startY = y;
+                    break;
+                }
+            }
+        }
+        if (startX !== -1) break;
+    }
+
+
+    if (startX !== -1) {
+        for (let i = 0; i < word.length; i++) {
+            const index = startY * size + startX + i;
+            grid.children[index].classList.add('found');
+        }
+        document.querySelector(`[data-word="${word}"]`).classList.add('strikethrough');
+        foundWords.add(word);
+        if (foundWords.size === selectedWords.length) {
+            document.getElementById('modal').style.display = 'block';
+            document.body.classList.add('blur');
+        }
+    }
+}
+
+
+fillGrid();
+
+
+document.querySelectorAll('.cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+        const word = prompt('Enter the word you found:').toUpperCase();
+        if (selectedWords.includes(word) && !foundWords.has(word)) {
+            highlightWord(word);
+        } else {
+            alert('Word not found or already found!');
+        }
+    });
 });
-
-// Generate images in grid
-const generateGrid = () => {
-    let count = 0;
-    for (let i = 0; i < 3; i++) {
-        for (let j = 0; j < 3; j++) {
-            let div = document.createElement("div");
-            div.setAttribute("data-position", `${i}_${j}`);
-            div.addEventListener("click", selectImage);
-            div.classList.add("image-container");
-            div.innerHTML = `<img src="./images/image_part_00${
-                imagesArr[count]
-            }.jpg" class="image ${
-                imagesArr[count] === 9 ? "target" : ""
-            }" data-index="${imagesArr[count]}"/>`;
-            count += 1;
-            puzzle.appendChild(div);
-        }
-    }
-};
-
-// Switching puzzle
-const selectImage = (e) => {
-    e.preventDefault();
-    // Set currentElement
-    currentElement = e.target;
-    // target (blank image)
-    let targetElement = document.querySelector(".target");
-    let currentParent = currentElement.parentElement;
-    let targetParent = targetElement.parentElement;
-
-    // get row and col values for both elements
-    const [row1, col1] = getCoords(currentParent);
-    const [row2, col2] = getCoords(targetParent);
-
-    if (checkAdjacent(row1, row2, col1, col2)) {
-        // Swap
-        currentElement.remove();
-        targetElement.remove();
-        // Get image index (to be used later for manipulating array)
-        let currentIndex = parseInt(currentElement.getAttribute("data-index"));
-        let targetIndex = parseInt(targetElement.getAttribute("data-index"));
-        // Swap Index
-        currentElement.setAttribute("data-index", targetIndex);
-        targetElement.setAttribute("data-index", currentIndex);
-        // Swap Images
-        currentParent.appendChild(targetElement);
-        targetParent.appendChild(currentElement);
-        // Array swaps
-        let currentArrIndex = imagesArr.indexOf(currentIndex);
-        let targetArrIndex = imagesArr.indexOf(targetIndex);
-        [imagesArr[currentArrIndex], imagesArr[targetArrIndex]] = [
-            imagesArr[targetArrIndex],
-            imagesArr[currentArrIndex],
-        ];
-
-        // Win condition
-        if (imagesArr.join("") === "123456789") {
-            setTimeout(() => {
-                alert(`Congratulations! You solved the puzzle in ${movesCount} moves!`);
-                landingPage.style.display = '';
-                puzzleContainer.style.display = 'none';
-                startButton.innerText = "Restart Game";
-            }, 1000);
-        }
-        // Increment and display move count
-        movesCount += 1;
-        moves.innerText = `Moves: ${movesCount}`;
-    }
-};
