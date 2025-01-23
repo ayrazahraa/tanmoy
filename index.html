@@ -4,22 +4,203 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Word Search Puzzle</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background-color: #2e2e2e;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            padding: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            grid-gap: 2px;
+            justify-content: center;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: transparent;
+            text-align: center;
+            line-height: 30px;
+            border: 1px solid white;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+        }
+        #words {
+            margin: 50px;
+            width: 300px;
+            padding: 10px;
+            background-color: whitesmoke;
+            color: black;
+            border-radius: 10px;
+        }
+        .found {
+            border-color: lightgreen;
+            color: lightgreen;
+        }
+        .strikethrough {
+            text-decoration: line-through;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 35%;
+            left: 35%;
+            width: 500px;
+            height: 200px;
+            background-color: darkgrey;
+            border-radius: 10px;
+            text-align: center;
+            padding: 20px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal h2,h4 {
+            margin-top: 60px;
+            color: black;
+        }
+        
+    </style>
 </head>
 <body>
-    <center><h1>Word Search Puzzle 🧩</h1></center>
+    <center><h1>Word Search Puzzle</h1></center>
     <div id="grid" class="grid"></div>
     <div id="words">
         <h2>Find these words:</h2>
         <ul id="wordList"></ul>
     </div>
     <center>
-        <div id="modal" class="modal">
-            <h2>Congratulations! You've found all the words! 🎉</h2>
-            <br>
-            <h4>Refresh Tab to restart the Game 🔄</h4>
-        </div>
-    </center>
-    <script src="script.js"></script>
+    <div id="modal" class="modal">
+        <h2>Congratulations! You've found all the words!</h2>
+        <br>
+        <h4>Refresh Tab to retart Game</h4>
+    </div>
+</center>
+    <script>
+        const allWords = ['JAVASCRIPT', 'HTML', 'CSS', 'PUZZLE', 'GAME', 'CODE', 'PROGRAM', 'DEBUG', 'FUNCTION', 'VARIABLE'];
+        const selectedWords = [];
+        while (selectedWords.length < 5) {
+            const word = allWords[Math.floor(Math.random() * allWords.length)];
+            if (!selectedWords.includes(word)) {
+                selectedWords.push(word);
+            }
+        }
+
+
+        const grid = document.getElementById('grid');
+        const wordList = document.getElementById('wordList');
+        const size = 10;
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const gridArray = Array(size).fill().map(() => Array(size).fill(''));
+        const foundWords = new Set();
+
+
+        function placeWord(word) {
+            let placed = false;
+            while (!placed) {
+                const startX = Math.floor(Math.random() * (size - word.length + 1));
+                const startY = Math.floor(Math.random() * size);
+                let canPlace = true;
+
+
+                for (let i = 0; i < word.length; i++) {
+                    if (gridArray[startY][startX + i] !== '') {
+                        canPlace = false;
+                        break;
+                    }
+                }
+
+
+                if (canPlace) {
+                    for (let i = 0; i < word.length; i++) {
+                        gridArray[startY][startX + i] = word[i];
+                    }
+                    placed = true;
+                }
+            }
+        }
+
+
+        function fillGrid() {
+            selectedWords.forEach(word => {
+                placeWord(word);
+                const li = document.createElement('li');
+                li.textContent = word;
+                li.dataset.word = word;
+                wordList.appendChild(li);
+            });
+
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (!gridArray[y][x]) {
+                        gridArray[y][x] = letters[Math.floor(Math.random() * letters.length)];
+                    }
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.textContent = gridArray[y][x];
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+
+        function highlightWord(word) {
+            let startX = -1;
+            let startY = -1;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (gridArray[y][x] === word[0]) {
+                        let match = true;
+                        for (let i = 0; i < word.length; i++) {
+                            if (gridArray[y][x + i] !== word[i]) {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) {
+                            startX = x;
+                            startY = y;
+                            break;
+                        }
+                    }
+                }
+                if (startX !== -1) break;
+            }
+
+
+            if (startX !== -1) {
+                for (let i = 0; i < word.length; i++) {
+                    const index = startY * size + startX + i;
+                    grid.children[index].classList.add('found');
+                }
+                document.querySelector(`[data-word="${word}"]`).classList.add('strikethrough');
+                foundWords.add(word);
+                if (foundWords.size === selectedWords.length) {
+                    document.getElementById('modal').style.display = 'block';
+                    document.body.classList.add('blur');
+                }
+            }
+        }
+
+
+        fillGrid();
+
+
+        document.querySelectorAll('.cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const word = prompt('Enter the word you found:').toUpperCase();
+                if (selectedWords.includes(word) && !foundWords.has(word)) {
+                    highlightWord(word);
+                } else {
+                    alert('Word not found or already found!');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
